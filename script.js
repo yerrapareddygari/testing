@@ -539,3 +539,366 @@ function truncateFileName(name, maxLength) {
 
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatDuration(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+function calculateTotalStorage() {
+    return uploadedMedia.reduce((total, media) => total + media.size, 0);
+}
+
+function updateStats() {
+    const mediaCount = document.getElementById('mediaCount');
+    const storageUsed = document.getElementById('storageUsed');
+    
+    if (mediaCount) mediaCount.textContent = uploadedMedia.length;
+    if (storageUsed) {
+        const totalBytes = calculateTotalStorage();
+        storageUsed.textContent = (totalBytes / (1024 * 1024)).toFixed(1);
+    }
+}
+
+// Storage Functions
+function saveMediaToStorage() {
+    try {
+        // Use IndexedDB for large files instead of localStorage
+        const dataToStore = uploadedMedia.map(media => ({
+            ...media,
+            // Store large files in chunks if needed
+            dataSize: media.data.length
+        }));
+        
+        localStorage.setItem('yreddy-gallery-media', JSON.stringify(dataToStore));
+    } catch (error) {
+        console.warn('Storage error:', error);
+        // Try to save without the largest files
+        try {
+            const smallerMedia = uploadedMedia.filter(media => media.size < 5 * 1024 * 1024); // Under 5MB
+            localStorage.setItem('yreddy-gallery-media', JSON.stringify(smallerMedia));
+            showToast('Some large files may not persist between sessions', 'warning');
+        } catch (secondError) {
+            showToast('Storage limit reached. Files may not be saved.', 'error');
+        }
+    }
+}
+
+function loadMediaFromStorage() {
+    try {
+        const stored = localStorage.getItem('yreddy-gallery-media');
+        if (stored) {
+            uploadedMedia = JSON.parse(stored);
+            refreshGallery();
+        }
+    } catch (error) {
+        console.error('Error loading media:', error);
+        showToast('Error loading saved media files', 'error');
+    }
+}
+
+// Gallery Controls
+function toggleView() {
+    const viewToggle = document.getElementById('viewToggle');
+    isGridView = !isGridView;
+    
+    if (isGridView) {
+        galleryGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+        viewToggle.innerHTML = '<span>⊞</span> Grid View';
+    } else {
+        galleryGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+        viewToggle.innerHTML = '<span>▦</span> Compact View';
+    }
+}
+
+function clearGallery() {
+    if (uploadedMedia.length === 0) {
+        showToast('Gallery is already empty', 'info');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete all ${uploadedMedia.length} files? This cannot be undone.`)) {
+        uploadedMedia = [];
+        saveMediaToStorage();
+        refreshGallery();
+        updateStats();
+        showToast('Gallery cleared successfully', 'info');
+    }
+}
+
+// Navigation Functions
+function scrollToUpload() {
+    document.getElementById('uploadSection').scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+function scrollToGallery() {
+    document.getElementById('gallerySection').scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+// Share Functions
+function updateShareLink() {
+    if (shareLink) {
+        shareLink.value = window.location.href;
+    }
+}
+
+function copyLink() {
+    shareLink.select();
+    shareLink.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        
+        const copyBtn = document.querySelector('.copy-btn');
+        const copyIcon = document.querySelector('.copy-icon');
+        const copyText = document.querySelector('.copy-text');
+        
+        copyIcon.textContent = '✅';
+        copyText.textContent = 'Copied!';
+        copyBtn.style.background = '#4ecdc4';
+        
+        setTimeout(() => {
+            copyIcon.textContent = '📋';
+            copyText.textContent = 'Copy';
+            copyBtn.style.background = '';
+        }, 2000);
+        
+        showToast('Link copied to clipboard! 📋', 'success');
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy link', 'error');
+    }
+}
+
+// Toast Notification System
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type]}</span>
+        <span class="toast-message">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 5000);
+}
+
+// Keyboard Navigation
+function handleKeyboard(event) {
+    if (modal.style.display === 'block') {
+        switch(event.key) {
+            case 'Escape':
+                closeModal();
+                break;
+            case 'ArrowLeft':
+                previousMedia();
+                break;
+            case 'ArrowRight':
+                nextMedia();
+                break;
+            case 'Delete':
+                deleteMedia();
+                break;
+            case ' ': // Spacebar for play/pause videos
+                event.preventDefault();
+                const video = modalMediaContainer.querySelector('video');
+                if (video) {
+                    if (video.paused) {
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                }
+                break;
+        }
+    }
+}
+
+// Enhanced CSS for video support
+const additionalStyles = document.createElement('style');
+additionalStyles.textContent = `
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .media-thumbnail {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .media-type-indicator {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        backdrop-filter: blur(4px);
+    }
+    
+    .video-duration {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-family: monospace;
+    }
+    
+    .modal-video {
+        max-width: 90vw;
+        max-height: 80vh;
+        width: auto;
+        height: auto;
+    }
+    
+    .modal-image {
+        max-width: 90vw;
+        max-height: 80vh;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+    }
+    
+    .control-btn.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .control-btn.danger-btn:hover {
+        background: var(--error-color);
+        color: white;
+        border-color: var(--error-color);
+    }
+    
+    .modal-btn.danger-btn:hover {
+        background: var(--error-color);
+        border-color: var(--error-color);
+    }
+    
+    .toast {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+        animation: slideInRight 0.3s ease forwards;
+        max-width: 400px;
+        word-wrap: break-word;
+    }
+    
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .toast-success { background: #4ecdc4; }
+    .toast-error { background: #ff6b6b; }
+    .toast-warning { background: #feca57; color: #333; }
+    .toast-info { background: #667eea; }
+    
+    .toast-close {
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0;
+        margin-left: auto;
+        opacity: 0.8;
+    }
+    
+    .toast-close:hover {
+        opacity: 1;
+    }
+    
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        max-width: 400px;
+    }
+    
+    .upload-details {
+        margin-top: 10px;
+        font-size: 0.9rem;
+        color: var(--gray-600);
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .modal-video, .modal-image {
+            max-width: 95vw;
+            max-height: 70vh;
+        }
+        
+        .gallery-controls {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .control-btn {
+            font-size: 0.85rem;
+            padding: 8px 12px;
+        }
+        
+        .toast-container {
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+    }
+`;
+document.head.appendChild(additionalStyles);
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+}
+
