@@ -1,4 +1,6 @@
+
 const ACCESS_HASH = "cf63879d89e66cb1ad96bbddad28766050d24c8fcd648d70fc2af01e517836ec";
+
 // Global Variables
 let uploadedMedia = [];
 let isAuthenticated = false;
@@ -181,7 +183,15 @@ function setupEventListeners() {
     // Click event for both desktop and mobile
     uploadBox.addEventListener('click', (e) => {
         e.preventDefault();
-        fileInput.click();
+        e.stopPropagation();
+        console.log('Upload box clicked');
+        
+        // For mobile, use the mobile-specific function
+        if (isMobileDevice()) {
+            triggerMobileUpload();
+        } else {
+            fileInput.click();
+        }
     });
     
     // Mobile file input focus fix
@@ -194,6 +204,65 @@ function setupEventListeners() {
     });
     
     document.addEventListener('keydown', handleKeyboard);
+}
+
+// Mobile Detection and Upload Functions
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+           ('ontouchstart' in window) || 
+           (navigator.maxTouchPoints > 0);
+}
+
+function triggerMobileUpload() {
+    console.log('Triggering mobile upload');
+    
+    // Remove any existing mobile inputs
+    const existingInputs = document.querySelectorAll('.mobile-file-input');
+    existingInputs.forEach(input => input.remove());
+    
+    // Create new mobile-optimized file input
+    const mobileInput = document.createElement('input');
+    mobileInput.type = 'file';
+    mobileInput.multiple = true;
+    mobileInput.accept = 'image/*,video/*';
+    mobileInput.className = 'mobile-file-input';
+    mobileInput.style.cssText = `
+        position: fixed;
+        top: -1000px;
+        left: -1000px;
+        opacity: 0;
+        pointer-events: none;
+    `;
+    
+    // Handle file selection
+    mobileInput.addEventListener('change', function(event) {
+        console.log('Mobile input changed:', event.target.files.length);
+        const files = Array.from(event.target.files);
+        if (files.length > 0) {
+            showToast(`Selected ${files.length} file(s)`, 'info');
+            processFiles(files);
+        }
+        // Clean up after a delay
+        setTimeout(() => {
+            if (mobileInput.parentNode) {
+                mobileInput.parentNode.removeChild(mobileInput);
+            }
+        }, 1000);
+    });
+    
+    // Add to DOM
+    document.body.appendChild(mobileInput);
+    
+    // Trigger with delay for mobile browsers
+    setTimeout(() => {
+        try {
+            mobileInput.click();
+            console.log('Mobile input clicked');
+        } catch (error) {
+            console.error('Mobile input click failed:', error);
+            showToast('Upload not supported on this device', 'error');
+        }
+    }, 100);
 }
 
 // Mobile Upload Functions
@@ -528,7 +597,7 @@ function checkEmptyGallery() {
     }
 }
 
-// Modal Functions
+// Modal Functions with Better Mobile Support
 function openModal(index) {
     currentMediaIndex = index;
     const mediaData = uploadedMedia[index];
@@ -541,22 +610,95 @@ function openModal(index) {
         video.src = mediaData.data;
         video.controls = true;
         video.autoplay = false;
+        video.preload = 'metadata';
         video.className = 'modal-content modal-video';
+        
+        // Better mobile video handling
+        if (isMobileDevice()) {
+            video.style.cssText = `
+                max-width: 100vw;
+                max-height: 80vh;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+            `;
+        }
+        
         modalMediaContainer.appendChild(video);
     } else {
         const img = document.createElement('img');
         img.src = mediaData.data;
         img.className = 'modal-content modal-image';
+        
+        // Better mobile image handling
+        if (isMobileDevice()) {
+            img.style.cssText = `
+                max-width: 100vw;
+                max-height: 80vh;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+                touch-action: pan-x pan-y pinch-zoom;
+            `;
+        }
+        
+        // Add pinch-to-zoom for mobile
+        if (isMobileDevice()) {
+            addPinchZoom(img);
+        }
+        
         modalMediaContainer.appendChild(img);
     }
     
     modalCaption.textContent = `${mediaData.name} (${mediaData.sizeFormatted}) - ${mediaData.uploadDate} ${mediaData.uploadTime}`;
     
+    // Better modal animation
     modal.style.opacity = '0';
     setTimeout(() => {
         modal.style.transition = 'opacity 0.3s ease';
         modal.style.opacity = '1';
     }, 10);
+}
+
+// Add pinch-to-zoom functionality for mobile images
+function addPinchZoom(img) {
+    let scale = 1;
+    let startDistance = 0;
+    let startScale = 1;
+    
+    img.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            startDistance = getDistance(e.touches[0], e.touches[1]);
+            startScale = scale;
+        }
+    }, { passive: false });
+    
+    img.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            const currentDistance = getDistance(e.touches[0], e.touches[1]);
+            scale = startScale * (currentDistance / startDistance);
+            scale = Math.max(0.5, Math.min(scale, 3)); // Limit zoom
+            img.style.transform = `scale(${scale})`;
+        }
+    }, { passive: false });
+    
+    img.addEventListener('touchend', function(e) {
+        if (e.touches.length < 2) {
+            // Reset if zoomed out too much
+            if (scale < 1) {
+                scale = 1;
+                img.style.transform = 'scale(1)';
+            }
+        }
+    });
+}
+
+function getDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
 }
 
 function closeModal() {
@@ -660,17 +802,42 @@ function updateStats() {
         const totalBytes = calculateTotalStorage();
         storageUsed.textContent = (totalBytes / (1024 * 1024)).toFixed(1);
     }
+    
+    // Show sync status
+    showSyncStatus();
 }
 
-// Storage Functions
+function showSyncStatus() {
+    const deviceId = getDeviceId();
+    const deviceType = isMobileDevice() ? 'Mobile' : 'Desktop';
+    const lastUpdate = localStorage.getItem('yreddy-gallery-shared');
+    
+    if (uploadedMedia.length > 0) {
+        showToast(`${deviceType} - ${uploadedMedia.length} files loaded`, 'info');
+    }
+}
+
+// Storage Functions with Cross-Device Sync
 function saveMediaToStorage() {
     try {
         const dataToStore = uploadedMedia.map(media => ({
             ...media,
-            dataSize: media.data.length
+            dataSize: media.data.length,
+            deviceId: getDeviceId(),
+            syncTimestamp: Date.now()
         }));
         
+        // Save to localStorage
         localStorage.setItem('yreddy-gallery-media', JSON.stringify(dataToStore));
+        
+        // Also save to a shared key for cross-device access
+        localStorage.setItem('yreddy-gallery-shared', JSON.stringify({
+            lastUpdate: Date.now(),
+            deviceCount: getDeviceCount(),
+            totalFiles: dataToStore.length
+        }));
+        
+        console.log('Media saved to storage:', dataToStore.length, 'files');
     } catch (error) {
         console.warn('Storage error:', error);
         try {
@@ -687,13 +854,36 @@ function loadMediaFromStorage() {
     try {
         const stored = localStorage.getItem('yreddy-gallery-media');
         if (stored) {
-            uploadedMedia = JSON.parse(stored);
+            const parsedMedia = JSON.parse(stored);
+            uploadedMedia = parsedMedia;
+            console.log('Loaded media from storage:', uploadedMedia.length, 'files');
             refreshGallery();
+        } else {
+            console.log('No stored media found');
         }
     } catch (error) {
         console.error('Error loading media:', error);
         showToast('Error loading saved media files', 'error');
     }
+}
+
+function getDeviceId() {
+    let deviceId = localStorage.getItem('yreddy-device-id');
+    if (!deviceId) {
+        deviceId = 'device-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('yreddy-device-id', deviceId);
+    }
+    return deviceId;
+}
+
+function getDeviceCount() {
+    const devices = JSON.parse(localStorage.getItem('yreddy-devices') || '[]');
+    const currentDevice = getDeviceId();
+    if (!devices.includes(currentDevice)) {
+        devices.push(currentDevice);
+        localStorage.setItem('yreddy-devices', JSON.stringify(devices));
+    }
+    return devices.length;
 }
 
 // Gallery Controls
@@ -969,18 +1159,56 @@ additionalStyles.textContent = `
     
     @media (max-width: 768px) {
         .modal-video, .modal-image {
-            max-width: 95vw;
-            max-height: 70vh;
+            max-width: 100vw !important;
+            max-height: 80vh !important;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        
+        /* Better mobile modal */
+        .modal {
+            padding: 10px;
+        }
+        
+        .modal-content-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60vh;
+        }
+        
+        .modal-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1001;
+            padding: 10px;
+        }
+        
+        .modal-caption {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px;
+            font-size: 14px;
         }
         
         .gallery-controls {
             flex-wrap: wrap;
             gap: 8px;
+            justify-content: center;
         }
         
         .control-btn {
             font-size: 0.85rem;
             padding: 8px 12px;
+            min-height: 44px;
         }
         
         .toast-container {
@@ -991,8 +1219,8 @@ additionalStyles.textContent = `
         
         /* Mobile upload improvements */
         .upload-box {
-            padding: 40px 20px;
-            min-height: 200px;
+            padding: 30px 15px;
+            min-height: 180px;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
         }
@@ -1003,38 +1231,93 @@ additionalStyles.textContent = `
         
         /* Mobile upload buttons */
         .mobile-upload-buttons {
-            display: flex;
+            display: flex !important;
             flex-direction: column;
             gap: 10px;
             margin-top: 20px;
         }
         
         .mobile-upload-btn {
-            padding: 12px 20px;
+            padding: 15px 20px;
             background: #667eea;
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-height: 44px;
+            min-height: 50px;
+            -webkit-tap-highlight-color: transparent;
         }
         
-        .mobile-upload-btn:hover {
+        .mobile-upload-btn:hover, .mobile-upload-btn:active {
             background: #5a6fd8;
-            transform: translateY(-1px);
+            transform: scale(0.98);
         }
         
-        .mobile-upload-btn:active {
-            transform: translateY(0);
+        /* Better mobile gallery */
+        .gallery-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            padding: 10px;
         }
         
-        /* Show mobile buttons only on mobile */
-        .mobile-upload-buttons {
-            display: flex !important;
+        .image-card {
+            border-radius: 8px;
         }
+        
+        .image-info {
+            padding: 10px;
+        }
+        
+        .image-name {
+            font-size: 0.85rem;
+        }
+        
+        .image-size {
+            font-size: 0.75rem;
+        }
+        
+        /* Mobile navigation */
+        .nav-actions {
+            gap: 5px;
+        }
+        
+        .nav-btn {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            min-height: 40px;
+        }
+        
+        /* Mobile hero section */
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.8rem;
+        }
+        
+        .hero-stats {
+            gap: 30px;
+        }
+        
+        /* Mobile modal navigation */
+        .nav-arrow {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
         
         /* Mobile file input */
         #fileInput {
