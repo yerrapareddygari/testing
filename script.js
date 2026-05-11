@@ -1,5 +1,17 @@
+// Secure Authentication - Correct Hash for "YReddy@0055"
+const ACCESS_HASH = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f";
 
-const ACCESS_HASH = "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4";
+// Debug: Test hash generation (remove after testing)
+async function testHashGeneration() {
+    const testPassword = "YReddy@0055";
+    const hash = await sha256(testPassword);
+    console.log('=== HASH DEBUG ===');
+    console.log('Password entered:', testPassword);
+    console.log('Generated hash:', hash);
+    console.log('Expected hash:', ACCESS_HASH);
+    console.log('Hashes match:', hash === ACCESS_HASH);
+    console.log('==================');
+}
 
 // Global Variables
 let uploadedMedia = [];
@@ -19,6 +31,7 @@ const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/avi', 'video/web
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', function() {
+    testHashGeneration(); // Debug - remove after testing
     initializeApp();
 });
 
