@@ -1,4 +1,5 @@
-const ACCESS_HASH = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"
+const ACCESS_HASH = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f";
+
 
 // Global Variables
 let uploadedMedia = [];
@@ -18,7 +19,6 @@ const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/avi', 'video/web
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', function() {
-    testHashGeneration(); // Debug - remove after testing
     initializeApp();
 });
 
