@@ -160,6 +160,15 @@ function initializeGallery() {
     modalMediaContainer = document.getElementById('modalMediaContainer');
     modalCaption = document.getElementById('modalCaption');
     
+    // Ensure file input is properly configured
+    if (fileInput) {
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*,video/*';
+        console.log('File input configured:', fileInput);
+    } else {
+        console.error('File input not found!');
+    }
+    
     loadMediaFromStorage();
     updateShareLink();
     updateStats();
@@ -180,18 +189,19 @@ function setupEventListeners() {
     uploadBox.addEventListener('touchmove', handleTouchMove, { passive: false });
     uploadBox.addEventListener('touchend', handleTouchEnd, { passive: false });
     
-    // Click event for both desktop and mobile
+    // Enhanced click handling for upload box
     uploadBox.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Upload box clicked');
+        console.log('Upload box clicked - triggering file input');
         
-        // For mobile, use the mobile-specific function
-        if (isMobileDevice()) {
-            triggerMobileUpload();
-        } else {
-            fileInput.click();
-        }
+        // Direct file input trigger - works on both desktop and mobile
+        fileInput.click();
+    });
+    
+    // Prevent event bubbling on file input
+    fileInput.addEventListener('click', (e) => {
+        e.stopPropagation();
     });
     
     // Mobile file input focus fix
@@ -267,38 +277,30 @@ function triggerMobileUpload() {
 
 // Mobile Upload Functions
 function triggerFileInput(source) {
-    console.log('Mobile upload triggered:', source);
+    console.log('Mobile upload button clicked:', source);
     
-    // Create a new file input for mobile
-    const mobileInput = document.createElement('input');
-    mobileInput.type = 'file';
-    mobileInput.multiple = true;
-    mobileInput.accept = 'image/*,video/*';
-    
-    // Set capture attribute based on source
     if (source === 'camera') {
-        mobileInput.capture = 'environment'; // Use rear camera
+        // Create input with camera capture
+        const cameraInput = document.createElement('input');
+        cameraInput.type = 'file';
+        cameraInput.accept = 'image/*,video/*';
+        cameraInput.capture = 'environment';
+        cameraInput.style.display = 'none';
+        
+        cameraInput.onchange = function(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                processFiles(files);
+            }
+            document.body.removeChild(cameraInput);
+        };
+        
+        document.body.appendChild(cameraInput);
+        cameraInput.click();
+    } else {
+        // Use the main file input for gallery
+        fileInput.click();
     }
-    
-    // Handle file selection
-    mobileInput.onchange = function(event) {
-        console.log('Mobile file selection:', event.target.files.length, 'files');
-        const files = Array.from(event.target.files);
-        if (files.length > 0) {
-            processFiles(files);
-        }
-        // Clean up
-        document.body.removeChild(mobileInput);
-    };
-    
-    // Add to DOM and trigger
-    mobileInput.style.display = 'none';
-    document.body.appendChild(mobileInput);
-    
-    // Small delay to ensure proper mobile handling
-    setTimeout(() => {
-        mobileInput.click();
-    }, 100);
 }
 
 // Mobile Touch Event Handlers
@@ -339,21 +341,34 @@ function handleTouchEnd(event) {
 
 // File Upload Functions
 function handleFileSelect(event) {
-    console.log('File selection triggered');
+    console.log('=== FILE SELECTION DEBUG ===');
+    console.log('Event triggered:', event.type);
+    console.log('Files selected:', event.target.files.length);
+    console.log('File input element:', event.target);
+    
     const files = Array.from(event.target.files);
-    console.log('Files selected:', files.length);
     
     if (files.length === 0) {
-        console.log('No files selected');
+        console.log('No files selected - user cancelled');
         return;
     }
     
-    // Mobile-specific: Clear the input after selection to allow re-selection
+    // Log file details
+    files.forEach((file, index) => {
+        console.log(`File ${index + 1}:`, {
+            name: file.name,
+            type: file.type,
+            size: formatFileSize(file.size)
+        });
+    });
+    
+    // Clear the input for re-selection
     setTimeout(() => {
         event.target.value = '';
     }, 100);
     
     processFiles(files);
+    console.log('=== END FILE SELECTION DEBUG ===');
 }
 
 function handleDragOver(event) {
