@@ -8,6 +8,21 @@ let isGridView = true;
 let currentFilter = 'all';
 let totalStorageUsed = 0;
 
+// Temporary test function - add this anywhere in your script.js
+async function testPassword() {
+    const testHash = await sha256("YReddy@0055");
+    console.log("Test hash for YReddy@0055:", testHash);
+    console.log("Stored hash:", ACCESS_HASH);
+    console.log("Hashes match:", testHash === ACCESS_HASH);
+}
+
+// Call it when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    testPassword(); // Remove this after testing
+    initializeApp();
+});
+
+
 // DOM Elements
 let fileInput, uploadBox, galleryGrid, shareLink, modal, modalMediaContainer, modalCaption;
 let loadingScreen, authOverlay, mainContainer;
