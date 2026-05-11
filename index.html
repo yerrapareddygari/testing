@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YReddy Family Gallery | Private Photo Collection</title>
+    <title>YReddy Family Gallery | Private Photo & Video Collection</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>">
-    <meta name="description" content="Private family photo gallery for YReddy family members">
+    <meta name="description" content="Private family photo and video gallery for YReddy family members">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -28,7 +28,7 @@
                     <span class="logo-icon">📸</span>
                     <h1>YReddy Gallery</h1>
                 </div>
-                <p class="tagline">Private Family Photo Collection</p>
+                <p class="tagline">Private Family Media Collection</p>
             </div>
             
             <div class="auth-box">
@@ -51,7 +51,7 @@
                     <div class="auth-error" id="authError"></div>
                     
                     <div class="auth-footer">
-                        <p>🔒 Your photos are secure and private</p>
+                        <p>🔒 Your media files are secure and private</p>
                         <p class="contact-info">Need access? Contact family admin</p>
                     </div>
                 </div>
@@ -87,11 +87,11 @@
                     <span class="gradient-text">Welcome to YReddy</span>
                     <span class="hero-subtitle">Family Gallery</span>
                 </h1>
-                <p class="hero-description">Share precious moments with your loved ones in a secure, private space</p>
+                <p class="hero-description">Share precious photos and videos with your loved ones in a secure, private space</p>
                 <div class="hero-stats">
                     <div class="stat-item">
-                        <span class="stat-number" id="photoCount">0</span>
-                        <span class="stat-label">Photos</span>
+                        <span class="stat-number" id="mediaCount">0</span>
+                        <span class="stat-label">Media Files</span>
                     </div>
                     <div class="stat-item">
                         <span class="stat-number" id="storageUsed">0</span>
@@ -101,7 +101,7 @@
             </div>
             <div class="hero-decoration">
                 <div class="floating-icon">📷</div>
-                <div class="floating-icon">🎉</div>
+                <div class="floating-icon">🎥</div>
                 <div class="floating-icon">❤️</div>
             </div>
         </header>
@@ -109,7 +109,7 @@
         <!-- Upload Section -->
         <section class="upload-section" id="uploadSection">
             <div class="section-header">
-                <h2>📤 Upload New Photos</h2>
+                <h2>📤 Upload Photos & Videos</h2>
                 <p>Drag and drop your favorite memories or click to browse</p>
             </div>
             
@@ -120,16 +120,19 @@
                             <div class="upload-icon">📁</div>
                             <div class="upload-plus">+</div>
                         </div>
-                        <h3>Drop your photos here</h3>
+                        <h3>Drop your media files here</h3>
                         <p>or <span class="browse-text">click to browse</span></p>
-                        <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                        <input type="file" id="fileInput" multiple accept="image/*,video/*" hidden>
                         
                         <div class="upload-info">
                             <div class="info-item">
-                                <span>📋</span> Supports: JPG, PNG, GIF, WebP
+                                <span>📸</span> Photos: JPG, PNG, GIF, WebP
                             </div>
                             <div class="info-item">
-                                <span>📏</span> Max size: 10MB per image
+                                <span>🎥</span> Videos: MP4, MOV, AVI, WebM
+                            </div>
+                            <div class="info-item">
+                                <span>📏</span> Any file size supported
                             </div>
                         </div>
                     </div>
@@ -138,12 +141,13 @@
                 <!-- Upload Progress -->
                 <div class="upload-progress" id="uploadProgress" style="display: none;">
                     <div class="progress-header">
-                        <span>Uploading photos...</span>
+                        <span id="uploadStatus">Processing files...</span>
                         <span id="progressText">0%</span>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill"></div>
                     </div>
+                    <div class="upload-details" id="uploadDetails"></div>
                 </div>
             </div>
         </section>
@@ -151,10 +155,16 @@
         <!-- Gallery Section -->
         <section class="gallery-section" id="gallerySection">
             <div class="section-header">
-                <h2>🖼️ Photo Gallery</h2>
+                <h2>🖼️ Media Gallery</h2>
                 <div class="gallery-controls">
-                    <button class="control-btn" onclick="toggleView()" id="viewToggle">
-                        <span>⊞</span> Grid View
+                    <button class="control-btn" onclick="filterMedia('all')" id="filterAll">
+                        <span>📁</span> All Media
+                    </button>
+                    <button class="control-btn" onclick="filterMedia('images')" id="filterImages">
+                        <span>📸</span> Photos
+                    </button>
+                    <button class="control-btn" onclick="filterMedia('videos')" id="filterVideos">
+                        <span>🎥</span> Videos
                     </button>
                     <button class="control-btn" onclick="clearGallery()">
                         <span>🗑️</span> Clear All
@@ -164,19 +174,19 @@
             
             <div class="gallery-container">
                 <div class="gallery-grid" id="galleryGrid">
-                    <!-- Images will be displayed here -->
+                    <!-- Media files will be displayed here -->
                 </div>
                 
                 <div class="empty-gallery" id="emptyGallery">
                     <div class="empty-icon">📷</div>
-                    <h3>No photos yet</h3>
-                    <p>Upload your first photo to get started!</p>
-                    <button class="empty-btn" onclick="scrollToUpload()">Upload Photos</button>
+                    <h3>No media files yet</h3>
+                    <p>Upload your first photo or video to get started!</p>
+                    <button class="empty-btn" onclick="scrollToUpload()">Upload Media</button>
                 </div>
             </div>
         </section>
 
-        <!-- Share Section -->
+        <!-- Share Section (Password Removed) -->
         <section class="share-section">
             <div class="section-header">
                 <h2>🔗 Share Gallery</h2>
@@ -196,12 +206,12 @@
                 
                 <div class="share-info">
                     <div class="info-card">
-                        <h4>🔐 Access Code</h4>
-                        <p>Share this code: <code class="access-code-display">YReddy@0055</code></p>
+                        <h4>🔐 Private Access</h4>
+                        <p>Only family members with the access code can view</p>
                     </div>
                     <div class="info-card">
                         <h4>📱 How to Share</h4>
-                        <p>Send the link + access code to family members</p>
+                        <p>Send the link to family members who have access</p>
                     </div>
                 </div>
             </div>
@@ -222,20 +232,22 @@
         </footer>
     </div>
 
-    <!-- Modal for full-size image view -->
+    <!-- Modal for full-size media view -->
     <div class="modal" id="imageModal">
         <div class="modal-header">
             <button class="modal-close" onclick="closeModal()">&times;</button>
             <div class="modal-actions">
-                <button class="modal-btn" onclick="downloadImage()">📥 Download</button>
-                <button class="modal-btn" onclick="deleteImage()">🗑️ Delete</button>
+                <button class="modal-btn" onclick="downloadMedia()">📥 Download</button>
+                <button class="modal-btn" onclick="deleteMedia()">🗑️ Delete</button>
             </div>
         </div>
         <div class="modal-content-wrapper">
-            <img class="modal-content" id="modalImage">
+            <div class="modal-media-container" id="modalMediaContainer">
+                <!-- Image or video will be inserted here -->
+            </div>
             <div class="modal-navigation">
-                <button class="nav-arrow prev" onclick="previousImage()">‹</button>
-                <button class="nav-arrow next" onclick="nextImage()">›</button>
+                <button class="nav-arrow prev" onclick="previousMedia()">‹</button>
+                <button class="nav-arrow next" onclick="nextMedia()">›</button>
             </div>
         </div>
         <div class="modal-caption" id="modalCaption"></div>
