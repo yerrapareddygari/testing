@@ -48,7 +48,7 @@ const familyVideos = [
         description: 'Fun-filled birthday celebration with games, cake cutting, and lots of joy.'
     },
     {
-        src: 'videos/family-dance-performance.mp4',
+        src: 'videos/VID-20260506-WA0002.mp4',
         title: 'Family Dance Performance',
         date: 'December 25, 2023',
         description: 'Christmas special dance performance by the family. Everyone joined in the fun!'
