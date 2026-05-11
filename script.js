@@ -1,3 +1,4 @@
+
 const ACCESS_HASH = "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4";
 
 // Global Variables
@@ -7,21 +8,6 @@ let currentMediaIndex = 0;
 let isGridView = true;
 let currentFilter = 'all';
 let totalStorageUsed = 0;
-
-// Temporary test function - add this anywhere in your script.js
-async function testPassword() {
-    const testHash = await sha256("YReddy@0055");
-    console.log("Test hash for YReddy@0055:", testHash);
-    console.log("Stored hash:", ACCESS_HASH);
-    console.log("Hashes match:", testHash === ACCESS_HASH);
-}
-
-// Call it when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    testPassword(); // Remove this after testing
-    initializeApp();
-});
-
 
 // DOM Elements
 let fileInput, uploadBox, galleryGrid, shareLink, modal, modalMediaContainer, modalCaption;
@@ -112,6 +98,7 @@ async function checkAccess() {
         }, 800);
         
     } catch (error) {
+        console.error('Hash error:', error);
         showAuthError('Authentication error. Please try again.');
         btnText.style.display = 'block';
         btnLoading.style.display = 'none';
@@ -280,7 +267,7 @@ function processImageFile(file, callback) {
             data: e.target.result,
             uploadDate: new Date().toLocaleDateString(),
             uploadTime: new Date().toLocaleTimeString(),
-            thumbnail: e.target.result // For images, use the same data as thumbnail
+            thumbnail: e.target.result
         };
         
         uploadedMedia.unshift(mediaData);
@@ -292,13 +279,11 @@ function processImageFile(file, callback) {
 function processVideoFile(file, callback) {
     const reader = new FileReader();
     reader.onload = function(e) {
-        // Create video element to generate thumbnail
         const video = document.createElement('video');
         video.src = e.target.result;
-        video.currentTime = 1; // Seek to 1 second for thumbnail
+        video.currentTime = 1;
         
         video.onloadeddata = function() {
-            // Create canvas to capture thumbnail
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
@@ -327,7 +312,6 @@ function processVideoFile(file, callback) {
         };
         
         video.onerror = function() {
-            // Fallback if video processing fails
             const mediaData = {
                 id: Date.now() + Math.random(),
                 name: file.name,
@@ -481,7 +465,6 @@ function closeModal() {
     setTimeout(() => {
         modal.style.display = 'none';
         
-        // Stop any playing videos
         const videos = modalMediaContainer.querySelectorAll('video');
         videos.forEach(video => {
             video.pause();
@@ -531,7 +514,6 @@ function deleteMedia() {
 function filterMedia(type) {
     currentFilter = type;
     
-    // Update button states
     document.querySelectorAll('.control-btn').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -584,19 +566,16 @@ function updateStats() {
 // Storage Functions
 function saveMediaToStorage() {
     try {
-        // Use IndexedDB for large files instead of localStorage
         const dataToStore = uploadedMedia.map(media => ({
             ...media,
-            // Store large files in chunks if needed
             dataSize: media.data.length
         }));
         
         localStorage.setItem('yreddy-gallery-media', JSON.stringify(dataToStore));
     } catch (error) {
         console.warn('Storage error:', error);
-        // Try to save without the largest files
         try {
-            const smallerMedia = uploadedMedia.filter(media => media.size < 5 * 1024 * 1024); // Under 5MB
+            const smallerMedia = uploadedMedia.filter(media => media.size < 5 * 1024 * 1024);
             localStorage.setItem('yreddy-gallery-media', JSON.stringify(smallerMedia));
             showToast('Some large files may not persist between sessions', 'warning');
         } catch (secondError) {
@@ -743,7 +722,7 @@ function handleKeyboard(event) {
             case 'Delete':
                 deleteMedia();
                 break;
-            case ' ': // Spacebar for play/pause videos
+            case ' ':
                 event.preventDefault();
                 const video = modalMediaContainer.querySelector('video');
                 if (video) {
@@ -812,20 +791,20 @@ additionalStyles.textContent = `
     }
     
     .control-btn.active {
-        background: var(--primary-color);
+        background: #667eea;
         color: white;
-        border-color: var(--primary-color);
+        border-color: #667eea;
     }
     
     .control-btn.danger-btn:hover {
-        background: var(--error-color);
+        background: #ff6b6b;
         color: white;
-        border-color: var(--error-color);
+        border-color: #ff6b6b;
     }
     
     .modal-btn.danger-btn:hover {
-        background: var(--error-color);
-        border-color: var(--error-color);
+        background: #ff6b6b;
+        border-color: #ff6b6b;
     }
     
     .toast {
@@ -881,10 +860,9 @@ additionalStyles.textContent = `
     .upload-details {
         margin-top: 10px;
         font-size: 0.9rem;
-        color: var(--gray-600);
+        color: #6c757d;
     }
     
-    /* Responsive improvements */
     @media (max-width: 768px) {
         .modal-video, .modal-image {
             max-width: 95vw;
@@ -916,4 +894,3 @@ if (document.readyState === 'loading') {
 } else {
     initializeApp();
 }
-
