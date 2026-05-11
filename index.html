@@ -126,7 +126,7 @@
                         
                         <div class="upload-info">
                             <div class="info-item">
-                                <span>📸</span> Photos: JPG, PNG, GIF, WebP
+                                <span>📋</span> Photos: JPG, PNG, GIF, WebP
                             </div>
                             <div class="info-item">
                                 <span>🎥</span> Videos: MP4, MOV, AVI, WebM
@@ -157,16 +157,19 @@
             <div class="section-header">
                 <h2>🖼️ Media Gallery</h2>
                 <div class="gallery-controls">
-                    <button class="control-btn" onclick="filterMedia('all')" id="filterAll">
+                    <button class="control-btn active" onclick="filterMedia('all')" id="filterAll">
                         <span>📁</span> All Media
                     </button>
                     <button class="control-btn" onclick="filterMedia('images')" id="filterImages">
-                        <span>📸</span> Photos
+                        <span>🖼️</span> Photos
                     </button>
                     <button class="control-btn" onclick="filterMedia('videos')" id="filterVideos">
                         <span>🎥</span> Videos
                     </button>
-                    <button class="control-btn" onclick="clearGallery()">
+                    <button class="control-btn" onclick="toggleView()" id="viewToggle">
+                        <span>⊞</span> Grid View
+                    </button>
+                    <button class="control-btn danger-btn" onclick="clearGallery()">
                         <span>🗑️</span> Clear All
                     </button>
                 </div>
@@ -186,7 +189,7 @@
             </div>
         </section>
 
-        <!-- Share Section (Password Removed) -->
+        <!-- Share Section -->
         <section class="share-section">
             <div class="section-header">
                 <h2>🔗 Share Gallery</h2>
@@ -207,11 +210,11 @@
                 <div class="share-info">
                     <div class="info-card">
                         <h4>🔐 Private Access</h4>
-                        <p>Only family members with the access code can view</p>
+                        <p>Family members need the access code to view</p>
                     </div>
                     <div class="info-card">
                         <h4>📱 How to Share</h4>
-                        <p>Send the link to family members who have access</p>
+                        <p>Send the link and access code to family members</p>
                     </div>
                 </div>
             </div>
@@ -238,7 +241,7 @@
             <button class="modal-close" onclick="closeModal()">&times;</button>
             <div class="modal-actions">
                 <button class="modal-btn" onclick="downloadMedia()">📥 Download</button>
-                <button class="modal-btn" onclick="deleteMedia()">🗑️ Delete</button>
+                <button class="modal-btn danger-btn" onclick="deleteMedia()">🗑️ Delete</button>
             </div>
         </div>
         <div class="modal-content-wrapper">
