@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Photo Gallery</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📸 Family Photo Gallery</h1>
+            <p>Share your memories with friends and family</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="upload-box" id="uploadBox">
+                <div class="upload-content">
+                    <i class="upload-icon">📁</i>
+                    <h3>Upload Your Photos</h3>
+                    <p>Drag and drop images here or click to browse</p>
+                    <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose Files
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="gallery-section">
+            <h2>Photo Gallery</h2>
+            <div class="gallery-grid" id="galleryGrid">
+                <!-- Images will be displayed here -->
+            </div>
+        </div>
+
+        <div class="share-section">
+            <h3>Share Gallery</h3>
+            <div class="share-box">
+                <input type="text" id="shareLink" readonly placeholder="Gallery link will appear here">
+                <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for full-size image view -->
+    <div class="modal" id="imageModal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div class="modal-caption" id="modalCaption"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
