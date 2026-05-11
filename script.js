@@ -1,15 +1,21 @@
+// Secure Authentication - Hash for "YReddy@0055"
 const ACCESS_HASH = "b8f3c2a1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1";
 
 // Global Variables
-let uploadedImages = [];
+let uploadedMedia = [];
 let isAuthenticated = false;
-let currentImageIndex = 0;
+let currentMediaIndex = 0;
 let isGridView = true;
+let currentFilter = 'all';
 let totalStorageUsed = 0;
 
 // DOM Elements
-let fileInput, uploadBox, galleryGrid, shareLink, modal, modalImage, modalCaption;
+let fileInput, uploadBox, galleryGrid, shareLink, modal, modalMediaContainer, modalCaption;
 let loadingScreen, authOverlay, mainContainer;
+
+// Supported file types
+const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/avi', 'video/webm', 'video/mkv', 'video/flv', 'video/wmv'];
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,16 +23,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Show loading screen
     loadingScreen = document.getElementById('loadingScreen');
     authOverlay = document.getElementById('authOverlay');
     mainContainer = document.getElementById('mainContainer');
     
-    // Hide loading screen after 1 second
     setTimeout(() => {
         loadingScreen.style.display = 'none';
         
-        // Check if already authenticated
         if (sessionStorage.getItem('galleryAccess') === 'granted') {
             showGallery();
         } else {
@@ -34,21 +37,18 @@ function initializeApp() {
         }
     }, 1000);
     
-    // Setup authentication event listeners
     setupAuthListeners();
 }
 
 function setupAuthListeners() {
     const accessCodeInput = document.getElementById('accessCode');
     
-    // Enter key to submit
     accessCodeInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             checkAccess();
         }
     });
     
-    // Auto-focus on input
     setTimeout(() => {
         accessCodeInput.focus();
     }, 1200);
@@ -75,7 +75,6 @@ async function checkAccess() {
         return;
     }
     
-    // Show loading state
     btnText.style.display = 'none';
     btnLoading.style.display = 'flex';
     authBtn.disabled = true;
@@ -83,7 +82,6 @@ async function checkAccess() {
     try {
         const hash = await sha256(code);
         
-        // Simulate network delay for better UX
         setTimeout(() => {
             if (hash === ACCESS_HASH) {
                 sessionStorage.setItem('galleryAccess', 'granted');
@@ -93,7 +91,6 @@ async function checkAccess() {
                 showAuthError('Invalid access code. Please try again.');
                 document.getElementById('accessCode').value = '';
                 
-                // Reset button state
                 btnText.style.display = 'block';
                 btnLoading.style.display = 'none';
                 authBtn.disabled = false;
@@ -114,8 +111,6 @@ function showAuthError(message) {
     
     errorDiv.textContent = message;
     accessCodeInput.style.borderColor = '#ff6b6b';
-    
-    // Shake animation
     accessCodeInput.style.animation = 'shake 0.5s ease-in-out';
     
     setTimeout(() => {
@@ -156,17 +151,15 @@ function logout() {
 
 // Gallery Initialization
 function initializeGallery() {
-    // Initialize DOM elements
     fileInput = document.getElementById('fileInput');
     uploadBox = document.getElementById('uploadBox');
     galleryGrid = document.getElementById('galleryGrid');
     shareLink = document.getElementById('shareLink');
     modal = document.getElementById('imageModal');
-    modalImage = document.getElementById('modalImage');
+    modalMediaContainer = document.getElementById('modalMediaContainer');
     modalCaption = document.getElementById('modalCaption');
     
-    // Load existing images and setup
-    loadImagesFromStorage();
+    loadMediaFromStorage();
     updateShareLink();
     updateStats();
     setupEventListeners();
@@ -174,21 +167,17 @@ function initializeGallery() {
 }
 
 function setupEventListeners() {
-    // File input change
     fileInput.addEventListener('change', handleFileSelect);
     
-    // Drag and drop events
     uploadBox.addEventListener('dragover', handleDragOver);
     uploadBox.addEventListener('dragleave', handleDragLeave);
     uploadBox.addEventListener('drop', handleDrop);
     uploadBox.addEventListener('click', () => fileInput.click());
     
-    // Modal events
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal();
     });
     
-    // Keyboard events
     document.addEventListener('keydown', handleKeyboard);
 }
 
@@ -213,84 +202,162 @@ function handleDrop(event) {
     uploadBox.classList.remove('dragover');
     
     const files = Array.from(event.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
-    if (imageFiles.length === 0) {
-        showToast('Please drop image files only', 'warning');
-        return;
-    }
-    
-    processFiles(imageFiles);
+    processFiles(files);
 }
 
 function processFiles(files) {
     if (files.length === 0) return;
     
-    const maxSize = 10 * 1024 * 1024; // 10MB
     const validFiles = files.filter(file => {
-        if (!file.type.startsWith('image/')) {
-            showToast(`${file.name} is not an image file`, 'warning');
-            return false;
-        }
-        if (file.size > maxSize) {
-            showToast(`${file.name} is too large (max 10MB)`, 'warning');
+        const isImage = SUPPORTED_IMAGE_TYPES.includes(file.type);
+        const isVideo = SUPPORTED_VIDEO_TYPES.includes(file.type);
+        
+        if (!isImage && !isVideo) {
+            showToast(`${file.name} is not a supported file type`, 'warning');
             return false;
         }
         return true;
     });
     
-    if (validFiles.length === 0) return;
+    if (validFiles.length === 0) {
+        showToast('No valid media files selected', 'warning');
+        return;
+    }
     
     showUploadProgress();
     let processed = 0;
+    const totalFiles = validFiles.length;
     
     validFiles.forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const imageData = {
+        const isVideo = SUPPORTED_VIDEO_TYPES.includes(file.type);
+        
+        if (isVideo) {
+            processVideoFile(file, () => {
+                processed++;
+                updateUploadProgress((processed / totalFiles) * 100, `Processing ${processed}/${totalFiles} files...`);
+                
+                if (processed === totalFiles) {
+                    finishUpload(totalFiles);
+                }
+            });
+        } else {
+            processImageFile(file, () => {
+                processed++;
+                updateUploadProgress((processed / totalFiles) * 100, `Processing ${processed}/${totalFiles} files...`);
+                
+                if (processed === totalFiles) {
+                    finishUpload(totalFiles);
+                }
+            });
+        }
+    });
+}
+
+function processImageFile(file, callback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const mediaData = {
+            id: Date.now() + Math.random(),
+            name: file.name,
+            type: 'image',
+            mimeType: file.type,
+            size: file.size,
+            sizeFormatted: formatFileSize(file.size),
+            data: e.target.result,
+            uploadDate: new Date().toLocaleDateString(),
+            uploadTime: new Date().toLocaleTimeString(),
+            thumbnail: e.target.result // For images, use the same data as thumbnail
+        };
+        
+        uploadedMedia.unshift(mediaData);
+        callback();
+    };
+    reader.readAsDataURL(file);
+}
+
+function processVideoFile(file, callback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Create video element to generate thumbnail
+        const video = document.createElement('video');
+        video.src = e.target.result;
+        video.currentTime = 1; // Seek to 1 second for thumbnail
+        
+        video.onloadeddata = function() {
+            // Create canvas to capture thumbnail
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = 320;
+            canvas.height = (video.videoHeight / video.videoWidth) * 320;
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
+            
+            const mediaData = {
                 id: Date.now() + Math.random(),
                 name: file.name,
+                type: 'video',
+                mimeType: file.type,
                 size: file.size,
                 sizeFormatted: formatFileSize(file.size),
                 data: e.target.result,
                 uploadDate: new Date().toLocaleDateString(),
-                uploadTime: new Date().toLocaleTimeString()
+                uploadTime: new Date().toLocaleTimeString(),
+                thumbnail: thumbnail,
+                duration: video.duration
             };
             
-            uploadedImages.unshift(imageData); // Add to beginning
-            processed++;
-            
-            // Update progress
-            const progress = (processed / validFiles.length) * 100;
-            updateUploadProgress(progress);
-            
-            if (processed === validFiles.length) {
-                // All files processed
-                setTimeout(() => {
-                    hideUploadProgress();
-                    saveImagesToStorage();
-                    refreshGallery();
-                    updateStats();
-                    showToast(`${validFiles.length} photo(s) uploaded successfully! 📸`, 'success');
-                }, 500);
-            }
+            uploadedMedia.unshift(mediaData);
+            callback();
         };
-        reader.readAsDataURL(file);
-    });
+        
+        video.onerror = function() {
+            // Fallback if video processing fails
+            const mediaData = {
+                id: Date.now() + Math.random(),
+                name: file.name,
+                type: 'video',
+                mimeType: file.type,
+                size: file.size,
+                sizeFormatted: formatFileSize(file.size),
+                data: e.target.result,
+                uploadDate: new Date().toLocaleDateString(),
+                uploadTime: new Date().toLocaleTimeString(),
+                thumbnail: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDMyMCAxODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMTgwIiBmaWxsPSIjNjY3ZWVhIi8+Cjx0ZXh0IHg9IjE2MCIgeT0iOTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0OCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn46lPC90ZXh0Pgo8L3N2Zz4K'
+            };
+            
+            uploadedMedia.unshift(mediaData);
+            callback();
+        };
+    };
+    reader.readAsDataURL(file);
+}
+
+function finishUpload(fileCount) {
+    setTimeout(() => {
+        hideUploadProgress();
+        saveMediaToStorage();
+        refreshGallery();
+        updateStats();
+        showToast(`${fileCount} file(s) uploaded successfully! 🎉`, 'success');
+    }, 500);
 }
 
 function showUploadProgress() {
     const progressDiv = document.getElementById('uploadProgress');
     progressDiv.style.display = 'block';
-    updateUploadProgress(0);
+    updateUploadProgress(0, 'Starting upload...');
 }
 
-function updateUploadProgress(percentage) {
+function updateUploadProgress(percentage, status = 'Processing files...') {
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
+    const uploadStatus = document.getElementById('uploadStatus');
     
     progressFill.style.width = percentage + '%';
     progressText.textContent = Math.round(percentage) + '%';
+    uploadStatus.textContent = status;
 }
 
 function hideUploadProgress() {
@@ -301,41 +368,61 @@ function hideUploadProgress() {
 // Gallery Display Functions
 function refreshGallery() {
     galleryGrid.innerHTML = '';
-    uploadedImages.forEach((imageData, index) => {
-        displayImage(imageData, index);
+    const filteredMedia = getFilteredMedia();
+    
+    filteredMedia.forEach((mediaData, index) => {
+        displayMedia(mediaData, uploadedMedia.indexOf(mediaData));
     });
     checkEmptyGallery();
 }
 
-function displayImage(imageData, index) {
-    const imageCard = document.createElement('div');
-    imageCard.className = 'image-card';
-    imageCard.onclick = () => openModal(index);
+function getFilteredMedia() {
+    switch(currentFilter) {
+        case 'images':
+            return uploadedMedia.filter(media => media.type === 'image');
+        case 'videos':
+            return uploadedMedia.filter(media => media.type === 'video');
+        default:
+            return uploadedMedia;
+    }
+}
+
+function displayMedia(mediaData, originalIndex) {
+    const mediaCard = document.createElement('div');
+    mediaCard.className = 'image-card media-card';
+    mediaCard.onclick = () => openModal(originalIndex);
     
-    imageCard.innerHTML = `
-        <img src="${imageData.data}" alt="${imageData.name}" loading="lazy">
+    const typeIcon = mediaData.type === 'video' ? '🎥' : '📷';
+    const duration = mediaData.duration ? formatDuration(mediaData.duration) : '';
+    
+    mediaCard.innerHTML = `
+        <div class="media-thumbnail">
+            <img src="${mediaData.thumbnail}" alt="${mediaData.name}" loading="lazy">
+            <div class="media-type-indicator">${typeIcon}</div>
+            ${duration ? `<div class="video-duration">${duration}</div>` : ''}
+        </div>
         <div class="image-info">
-            <div class="image-name">${truncateFileName(imageData.name, 30)}</div>
-            <div class="image-size">${imageData.sizeFormatted} • ${imageData.uploadDate}</div>
+            <div class="image-name">${truncateFileName(mediaData.name, 30)}</div>
+            <div class="image-size">${mediaData.sizeFormatted} • ${mediaData.uploadDate}</div>
         </div>
     `;
     
-    // Add entrance animation
-    imageCard.style.opacity = '0';
-    imageCard.style.transform = 'translateY(20px)';
-    galleryGrid.appendChild(imageCard);
+    mediaCard.style.opacity = '0';
+    mediaCard.style.transform = 'translateY(20px)';
+    galleryGrid.appendChild(mediaCard);
     
-    // Trigger animation
     setTimeout(() => {
-        imageCard.style.transition = 'all 0.5s ease';
-        imageCard.style.opacity = '1';
-        imageCard.style.transform = 'translateY(0)';
+        mediaCard.style.transition = 'all 0.5s ease';
+        mediaCard.style.opacity = '1';
+        mediaCard.style.transform = 'translateY(0)';
     }, 100);
 }
 
 function checkEmptyGallery() {
     const emptyGallery = document.getElementById('emptyGallery');
-    if (uploadedImages.length === 0) {
+    const filteredMedia = getFilteredMedia();
+    
+    if (filteredMedia.length === 0) {
         emptyGallery.style.display = 'block';
         galleryGrid.style.display = 'none';
     } else {
@@ -346,14 +433,28 @@ function checkEmptyGallery() {
 
 // Modal Functions
 function openModal(index) {
-    currentImageIndex = index;
-    const imageData = uploadedImages[index];
+    currentMediaIndex = index;
+    const mediaData = uploadedMedia[index];
     
     modal.style.display = 'block';
-    modalImage.src = imageData.data;
-    modalCaption.textContent = `${imageData.name} (${imageData.sizeFormatted}) - ${imageData.uploadDate} ${imageData.uploadTime}`;
+    modalMediaContainer.innerHTML = '';
     
-    // Add fade-in animation
+    if (mediaData.type === 'video') {
+        const video = document.createElement('video');
+        video.src = mediaData.data;
+        video.controls = true;
+        video.autoplay = false;
+        video.className = 'modal-content modal-video';
+        modalMediaContainer.appendChild(video);
+    } else {
+        const img = document.createElement('img');
+        img.src = mediaData.data;
+        img.className = 'modal-content modal-image';
+        modalMediaContainer.appendChild(img);
+    }
+    
+    modalCaption.textContent = `${mediaData.name} (${mediaData.sizeFormatted}) - ${mediaData.uploadDate} ${mediaData.uploadTime}`;
+    
     modal.style.opacity = '0';
     setTimeout(() => {
         modal.style.transition = 'opacity 0.3s ease';
@@ -365,44 +466,67 @@ function closeModal() {
     modal.style.opacity = '0';
     setTimeout(() => {
         modal.style.display = 'none';
+        
+        // Stop any playing videos
+        const videos = modalMediaContainer.querySelectorAll('video');
+        videos.forEach(video => {
+            video.pause();
+            video.currentTime = 0;
+        });
     }, 300);
 }
 
-function previousImage() {
-    if (currentImageIndex > 0) {
-        openModal(currentImageIndex - 1);
+function previousMedia() {
+    if (currentMediaIndex > 0) {
+        openModal(currentMediaIndex - 1);
     } else {
-        openModal(uploadedImages.length - 1); // Loop to last image
+        openModal(uploadedMedia.length - 1);
     }
 }
 
-function nextImage() {
-    if (currentImageIndex < uploadedImages.length - 1) {
-        openModal(currentImageIndex + 1);
+function nextMedia() {
+    if (currentMediaIndex < uploadedMedia.length - 1) {
+        openModal(currentMediaIndex + 1);
     } else {
-        openModal(0); // Loop to first image
+        openModal(0);
     }
 }
 
-function downloadImage() {
-    const imageData = uploadedImages[currentImageIndex];
+function downloadMedia() {
+    const mediaData = uploadedMedia[currentMediaIndex];
     const link = document.createElement('a');
-    link.download = imageData.name;
-    link.href = imageData.data;
+    link.download = mediaData.name;
+    link.href = mediaData.data;
     link.click();
-    showToast('Image downloaded! 📥', 'success');
+    showToast(`${mediaData.name} downloaded! 📥`, 'success');
 }
 
-function deleteImage() {
-    if (confirm('Are you sure you want to delete this image?')) {
-        const imageData = uploadedImages[currentImageIndex];
-        uploadedImages.splice(currentImageIndex, 1);
-        saveImagesToStorage();
+function deleteMedia() {
+    if (confirm('Are you sure you want to delete this file?')) {
+        const mediaData = uploadedMedia[currentMediaIndex];
+        uploadedMedia.splice(currentMediaIndex, 1);
+        saveMediaToStorage();
         refreshGallery();
         updateStats();
         closeModal();
-        showToast(`${imageData.name} deleted`, 'info');
+        showToast(`${mediaData.name} deleted`, 'info');
     }
+}
+
+// Filter Functions
+function filterMedia(type) {
+    currentFilter = type;
+    
+    // Update button states
+    document.querySelectorAll('.control-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeBtn = type === 'all' ? 'filterAll' : 
+                     type === 'images' ? 'filterImages' : 'filterVideos';
+    document.getElementById(activeBtn).classList.add('active');
+    
+    refreshGallery();
 }
 
 // Utility Functions
@@ -416,237 +540,3 @@ function truncateFileName(name, maxLength) {
 
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function calculateTotalStorage() {
-    return uploadedImages.reduce((total, image) => total + image.size, 0);
-}
-
-function updateStats() {
-    const photoCount = document.getElementById('photoCount');
-    const storageUsed = document.getElementById('storageUsed');
-    
-    if (photoCount) photoCount.textContent = uploadedImages.length;
-    if (storageUsed) {
-        const totalBytes = calculateTotalStorage();
-        storageUsed.textContent = (totalBytes / (1024 * 1024)).toFixed(1);
-    }
-}
-
-// Storage Functions
-function saveImagesToStorage() {
-    try {
-        localStorage.setItem('yreddy-gallery-images', JSON.stringify(uploadedImages));
-    } catch (error) {
-        console.warn('Storage limit exceeded:', error);
-        showToast('Storage limit reached. Please delete some images.', 'warning');
-    }
-}
-
-function loadImagesFromStorage() {
-    try {
-        const stored = localStorage.getItem('yreddy-gallery-images');
-        if (stored) {
-            uploadedImages = JSON.parse(stored);
-            refreshGallery();
-        }
-    } catch (error) {
-        console.error('Error loading images:', error);
-        showToast('Error loading saved images', 'error');
-    }
-}
-
-// Gallery Controls
-function toggleView() {
-    const viewToggle = document.getElementById('viewToggle');
-    isGridView = !isGridView;
-    
-    if (isGridView) {
-        galleryGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
-        viewToggle.innerHTML = '<span>⊞</span> Grid View';
-    } else {
-        galleryGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
-        viewToggle.innerHTML = '<span>▦</span> Compact View';
-    }
-}
-
-function clearGallery() {
-    if (uploadedImages.length === 0) {
-        showToast('Gallery is already empty', 'info');
-        return;
-    }
-    
-    if (confirm(`Are you sure you want to delete all ${uploadedImages.length} photos? This cannot be undone.`)) {
-        uploadedImages = [];
-        saveImagesToStorage();
-        refreshGallery();
-        updateStats();
-        showToast('Gallery cleared successfully', 'info');
-    }
-}
-
-// Navigation Functions
-function scrollToUpload() {
-    document.getElementById('uploadSection').scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-    });
-}
-
-function scrollToGallery() {
-    document.getElementById('gallerySection').scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-    });
-}
-
-// Share Functions
-function updateShareLink() {
-    if (shareLink) {
-        shareLink.value = window.location.href;
-    }
-}
-
-function copyLink() {
-    shareLink.select();
-    shareLink.setSelectionRange(0, 99999);
-    
-    try {
-        document.execCommand('copy');
-        
-        const copyBtn = document.querySelector('.copy-btn');
-        const copyIcon = document.querySelector('.copy-icon');
-        const copyText = document.querySelector('.copy-text');
-        
-        copyIcon.textContent = '✅';
-        copyText.textContent = 'Copied!';
-        copyBtn.style.background = '#4ecdc4';
-        
-        setTimeout(() => {
-            copyIcon.textContent = '📋';
-            copyText.textContent = 'Copy';
-            copyBtn.style.background = '';
-        }, 2000);
-        
-        showToast('Link copied to clipboard! 📋', 'success');
-    } catch (err) {
-        console.error('Failed to copy:', err);
-        showToast('Failed to copy link', 'error');
-    }
-}
-
-// Toast Notification System
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    
-    const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
-    };
-    
-    toast.innerHTML = `
-        <span class="toast-icon">${icons[type]}</span>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-    `;
-    
-    toastContainer.appendChild(toast);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (toast.parentElement) {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => toast.remove(), 300);
-        }
-    }, 5000);
-}
-
-// Keyboard Navigation
-function handleKeyboard(event) {
-    if (modal.style.display === 'block') {
-        switch(event.key) {
-            case 'Escape':
-                closeModal();
-                break;
-            case 'ArrowLeft':
-                previousImage();
-                break;
-            case 'ArrowRight':
-                nextImage();
-                break;
-            case 'Delete':
-                deleteImage();
-                break;
-        }
-    }
-}
-
-// Add CSS animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-    
-    .toast {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
-        margin-bottom: 10px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        transform: translateX(100%);
-        transition: all 0.3s ease;
-        animation: slideInRight 0.3s ease forwards;
-    }
-    
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    .toast-success { background: #4ecdc4; }
-    .toast-error { background: #ff6b6b; }
-    .toast-warning { background: #feca57; }
-    .toast-info { background: #667eea; }
-    
-    .toast-close {
-        background: none;
-        border: none;
-        color: white;
-        font-size: 18px;
-        cursor: pointer;
-        padding: 0;
-        margin-left: auto;
-    }
-    
-    .toast-container {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        max-width: 400px;
-    }
-`;
-document.head.appendChild(style);
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-    initializeApp();
-}
