@@ -54,13 +54,13 @@ const familyVideos = [
         description: 'Christmas special dance performance by the family. Everyone joined in the fun!'
     },
     {
-        src: 'videos/cooking-together.mp4',
+        src: 'videos/devi.mp4',
         title: 'Cooking Together',
         date: 'March 5, 2024',
         description: 'Family cooking session making traditional dishes. Teaching recipes to the next generation.'
     },
     {
-        src: 'videos/vacation-highlights.mp4',
+        src: 'videos/.mp4',
         title: 'Vacation Highlights',
         date: 'March 18, 2024',
         description: 'Best moments from our Goa vacation compiled into a beautiful memory reel.'
