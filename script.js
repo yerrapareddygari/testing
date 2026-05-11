@@ -1,15 +1,4 @@
-const ACCESS_HASH = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f";
-
-// Debug: Test hash generation (remove after testing)
-async function testHashGeneration() {
-    const hash = await sha256(testPassword);
-    console.log('=== HASH DEBUG ===');
-    console.log('Password entered:', testPassword);
-    console.log('Generated hash:', hash);
-    console.log('Expected hash:', ACCESS_HASH);
-    console.log('Hashes match:', hash === ACCESS_HASH);
-    console.log('==================');
-}
+const ACCESS_HASH = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"
 
 // Global Variables
 let uploadedMedia = [];
