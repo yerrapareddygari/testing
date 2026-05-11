@@ -1,6 +1,4 @@
-const ACCESS_HASH = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f";
-
-
+const ACCESS_HASH = "cf63879d89e66cb1ad96bbddad28766050d24c8fcd648d70fc2af01e517836ec";
 // Global Variables
 let uploadedMedia = [];
 let isAuthenticated = false;
