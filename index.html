@@ -3,65 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Family Photo Gallery</title>
+    <title>YReddy Family Gallery | Private Photo Collection</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>">
+    <meta name="description" content="Private family photo gallery for YReddy family members">
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Loading Gallery...</h2>
+        </div>
+    </div>
+
     <!-- Authentication Overlay -->
     <div class="auth-overlay" id="authOverlay">
-        <div class="auth-box">
-            <h2>🔒 Private Family Gallery</h2>
-            <p>Enter access code to view photos..</p>
-            <input type="password" id="accessCode" placeholder="Enter Access Code" maxlength="20">
-            <button onclick="checkAccess()">Enter Gallery</button>
-            <div class="auth-error" id="authError"></div>
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="logo">
+                    <span class="logo-icon">📸</span>
+                    <h1>YReddy Gallery</h1>
+                </div>
+                <p class="tagline">Private Family Photo Collection</p>
+            </div>
+            
+            <div class="auth-box">
+                <div class="auth-form">
+                    <h3>🔐 Secure Access</h3>
+                    <p>Enter your family access code to continue</p>
+                    
+                    <div class="input-group">
+                        <input type="password" id="accessCode" placeholder="Enter Access Code" maxlength="50" autocomplete="off">
+                        <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
+                    </div>
+                    
+                    <button class="auth-btn" onclick="checkAccess()">
+                        <span class="btn-text">Access Gallery</span>
+                        <span class="btn-loading" style="display: none;">
+                            <div class="btn-spinner"></div>
+                        </span>
+                    </button>
+                    
+                    <div class="auth-error" id="authError"></div>
+                    
+                    <div class="auth-footer">
+                        <p>🔒 Your photos are secure and private</p>
+                        <p class="contact-info">Need access? Contact family admin</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Main Gallery Content -->
     <div class="container" id="mainContainer">
-        <header>
-            <h1>📸 Family Photo Gallery</h1>
-            <p>Share your memories with friends and family</p>
+        <!-- Navigation Header -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <span class="nav-logo">📸</span>
+                <span class="nav-title">YReddy Gallery</span>
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn" onclick="scrollToUpload()">
+                    <span>📤</span> Upload
+                </button>
+                <button class="nav-btn" onclick="scrollToGallery()">
+                    <span>🖼️</span> Gallery
+                </button>
+                <button class="nav-btn logout-btn" onclick="logout()">
+                    <span>🚪</span> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <header class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">Welcome to YReddy</span>
+                    <span class="hero-subtitle">Family Gallery</span>
+                </h1>
+                <p class="hero-description">Share precious moments with your loved ones in a secure, private space</p>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number" id="photoCount">0</span>
+                        <span class="stat-label">Photos</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="storageUsed">0</span>
+                        <span class="stat-label">MB Used</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-decoration">
+                <div class="floating-icon">📷</div>
+                <div class="floating-icon">🎉</div>
+                <div class="floating-icon">❤️</div>
+            </div>
         </header>
 
-        <div class="upload-section">
-            <div class="upload-box" id="uploadBox">
-                <div class="upload-content">
-                    <i class="upload-icon">📁</i>
-                    <h3>Upload Your Photos</h3>
-                    <p>Drag and drop images here or click to browse</p>
-                    <input type="file" id="fileInput" multiple accept="image/*" hidden>
-                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                        Choose Files
+        <!-- Upload Section -->
+        <section class="upload-section" id="uploadSection">
+            <div class="section-header">
+                <h2>📤 Upload New Photos</h2>
+                <p>Drag and drop your favorite memories or click to browse</p>
+            </div>
+            
+            <div class="upload-container">
+                <div class="upload-box" id="uploadBox">
+                    <div class="upload-content">
+                        <div class="upload-icon-container">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-plus">+</div>
+                        </div>
+                        <h3>Drop your photos here</h3>
+                        <p>or <span class="browse-text">click to browse</span></p>
+                        <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                        
+                        <div class="upload-info">
+                            <div class="info-item">
+                                <span>📋</span> Supports: JPG, PNG, GIF, WebP
+                            </div>
+                            <div class="info-item">
+                                <span>📏</span> Max size: 10MB per image
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Upload Progress -->
+                <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="progress-header">
+                        <span>Uploading photos...</span>
+                        <span id="progressText">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gallery Section -->
+        <section class="gallery-section" id="gallerySection">
+            <div class="section-header">
+                <h2>🖼️ Photo Gallery</h2>
+                <div class="gallery-controls">
+                    <button class="control-btn" onclick="toggleView()" id="viewToggle">
+                        <span>⊞</span> Grid View
+                    </button>
+                    <button class="control-btn" onclick="clearGallery()">
+                        <span>🗑️</span> Clear All
                     </button>
                 </div>
             </div>
-        </div>
-
-        <div class="gallery-section">
-            <h2>Photo Gallery</h2>
-            <div class="gallery-grid" id="galleryGrid">
-                <!-- Images will be displayed here -->
+            
+            <div class="gallery-container">
+                <div class="gallery-grid" id="galleryGrid">
+                    <!-- Images will be displayed here -->
+                </div>
+                
+                <div class="empty-gallery" id="emptyGallery">
+                    <div class="empty-icon">📷</div>
+                    <h3>No photos yet</h3>
+                    <p>Upload your first photo to get started!</p>
+                    <button class="empty-btn" onclick="scrollToUpload()">Upload Photos</button>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="share-section">
-            <h3>Share Gallery</h3>
-            <div class="share-box">
-                <input type="text" id="shareLink" readonly placeholder="Gallery link will appear here">
-                <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+        <!-- Share Section -->
+        <section class="share-section">
+            <div class="section-header">
+                <h2>🔗 Share Gallery</h2>
+                <p>Share this private gallery with family members</p>
             </div>
-            <p class="share-note">Share this link and access code: <strong>FAMILY2024</strong></p>
-        </div>
+            
+            <div class="share-container">
+                <div class="share-box">
+                    <div class="share-input-group">
+                        <input type="text" id="shareLink" readonly placeholder="Gallery link will appear here">
+                        <button class="copy-btn" onclick="copyLink()">
+                            <span class="copy-icon">📋</span>
+                            <span class="copy-text">Copy</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="share-info">
+                    <div class="info-card">
+                        <h4>🔐 Access Code</h4>
+                        <p>Share this code: <code class="access-code-display">YReddy@0055</code></p>
+                    </div>
+                    <div class="info-card">
+                        <h4>📱 How to Share</h4>
+                        <p>Send the link + access code to family members</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="footer-logo">📸</span>
+                    <span>YReddy Family Gallery</span>
+                </div>
+                <div class="footer-info">
+                    <p>&copy; 2024 YReddy Family. Private & Secure.</p>
+                    <p>Made with ❤️ for family memories</p>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <!-- Modal for full-size image view -->
     <div class="modal" id="imageModal">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <img class="modal-content" id="modalImage">
+        <div class="modal-header">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-actions">
+                <button class="modal-btn" onclick="downloadImage()">📥 Download</button>
+                <button class="modal-btn" onclick="deleteImage()">🗑️ Delete</button>
+            </div>
+        </div>
+        <div class="modal-content-wrapper">
+            <img class="modal-content" id="modalImage">
+            <div class="modal-navigation">
+                <button class="nav-arrow prev" onclick="previousImage()">‹</button>
+                <button class="nav-arrow next" onclick="nextImage()">›</button>
+            </div>
+        </div>
         <div class="modal-caption" id="modalCaption"></div>
     </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <script src="script.js"></script>
 </body>
