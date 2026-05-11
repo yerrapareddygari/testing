@@ -7,7 +7,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
+    <!-- Authentication Overlay -->
+    <div class="auth-overlay" id="authOverlay">
+        <div class="auth-box">
+            <h2>🔒 Private Family Gallery</h2>
+            <p>Enter access code to view photos</p>
+            <input type="password" id="accessCode" placeholder="Enter Access Code" maxlength="20">
+            <button onclick="checkAccess()">Enter Gallery</button>
+            <div class="auth-error" id="authError"></div>
+        </div>
+    </div>
+
+    <!-- Main Gallery Content -->
+    <div class="container" id="mainContainer">
         <header>
             <h1>📸 Family Photo Gallery</h1>
             <p>Share your memories with friends and family</p>
@@ -40,6 +52,7 @@
                 <input type="text" id="shareLink" readonly placeholder="Gallery link will appear here">
                 <button class="copy-btn" onclick="copyLink()">Copy Link</button>
             </div>
+            <p class="share-note">Share this link and access code: <strong>FAMILY2024</strong></p>
         </div>
     </div>
 
