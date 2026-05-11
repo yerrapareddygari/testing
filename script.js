@@ -1,20 +1,65 @@
+// Access control
+const ACCESS_CODE = "FAMILY2024"; // Change this to your desired code
 let uploadedImages = [];
+let isAuthenticated = false;
 
 // DOM Elements
-const fileInput = document.getElementById('fileInput');
-const uploadBox = document.getElementById('uploadBox');
-const galleryGrid = document.getElementById('galleryGrid');
-const shareLink = document.getElementById('shareLink');
-const modal = document.getElementById('imageModal');
-const modalImage = document.getElementById('modalImage');
-const modalCaption = document.getElementById('modalCaption');
+let fileInput, uploadBox, galleryGrid, shareLink, modal, modalImage, modalCaption;
 
-// Initialize
+// Authentication check
 document.addEventListener('DOMContentLoaded', function() {
+    if (sessionStorage.getItem('galleryAccess') === 'granted') {
+        showGallery();
+    }
+    
+    // Allow Enter key to submit access code
+    document.getElementById('accessCode').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            checkAccess();
+        }
+    });
+});
+
+function checkAccess() {
+    const code = document.getElementById('accessCode').value.trim();
+    const errorDiv = document.getElementById('authError');
+    
+    if (code === ACCESS_CODE) {
+        sessionStorage.setItem('galleryAccess', 'granted');
+        showGallery();
+    } else {
+        errorDiv.textContent = 'Invalid access code. Please try again.';
+        document.getElementById('accessCode').value = '';
+        document.getElementById('accessCode').style.borderColor = '#dc3545';
+        
+        setTimeout(() => {
+            errorDiv.textContent = '';
+            document.getElementById('accessCode').style.borderColor = '#ddd';
+        }, 3000);
+    }
+}
+
+function showGallery() {
+    document.getElementById('authOverlay').style.display = 'none';
+    document.getElementById('mainContainer').style.display = 'block';
+    isAuthenticated = true;
+    initializeGallery();
+}
+
+function initializeGallery() {
+    // Initialize DOM elements
+    fileInput = document.getElementById('fileInput');
+    uploadBox = document.getElementById('uploadBox');
+    galleryGrid = document.getElementById('galleryGrid');
+    shareLink = document.getElementById('shareLink');
+    modal = document.getElementById('imageModal');
+    modalImage = document.getElementById('modalImage');
+    modalCaption = document.getElementById('modalCaption');
+    
     loadImagesFromStorage();
     updateShareLink();
     setupEventListeners();
-});
+}
 
 function setupEventListeners() {
     // File input change
@@ -67,7 +112,6 @@ function processFiles(files) {
                 uploadedImages.push(imageData);
                 saveImagesToStorage();
                 displayImage(imageData);
-                updateShareLink();
             };
             reader.readAsDataURL(file);
         }
@@ -80,14 +124,22 @@ function displayImage(imageData) {
     imageCard.onclick = () => openModal(imageData);
     
     imageCard.innerHTML = `
-        <img src="${imageData.data}" alt="${imageData.name}">
+        <img src="${imageData.data}" alt="${imageData.name}" loading="lazy">
         <div class="image-info">
-            <div class="image-name">${imageData.name}</div>
+            <div class="image-name">${truncateFileName(imageData.name, 25)}</div>
             <div class="image-size">${imageData.size} • ${imageData.uploadDate}</div>
         </div>
     `;
     
     galleryGrid.appendChild(imageCard);
+}
+
+function truncateFileName(name, maxLength) {
+    if (name.length <= maxLength) return name;
+    const extension = name.split('.').pop();
+    const nameWithoutExt = name.substring(0, name.lastIndexOf('.'));
+    const truncated = nameWithoutExt.substring(0, maxLength - extension.length - 4) + '...';
+    return truncated + '.' + extension;
 }
 
 function openModal(imageData) {
@@ -113,6 +165,7 @@ function saveImagesToStorage() {
         localStorage.setItem('familyGalleryImages', JSON.stringify(uploadedImages));
     } catch (error) {
         console.warn('Storage limit exceeded. Some images may not be saved.');
+        alert('Storage limit reached. Please delete some images to add new ones.');
     }
 }
 
@@ -139,13 +192,14 @@ function copyLink() {
     try {
         document.execCommand('copy');
         
-        const originalText = document.querySelector('.copy-btn').textContent;
-        document.querySelector('.copy-btn').textContent = 'Copied!';
-        document.querySelector('.copy-btn').style.background = '#28a745';
+        const copyBtn = document.querySelector('.copy-btn');
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.background = '#28a745';
         
         setTimeout(() => {
-            document.querySelector('.copy-btn').textContent = originalText;
-            document.querySelector('.copy-btn').style.background = '#28a745';
+            copyBtn.textContent = originalText;
+            copyBtn.style.background = '#28a745';
         }, 2000);
     } catch (err) {
         console.error('Failed to copy link:', err);
