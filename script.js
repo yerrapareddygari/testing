@@ -209,6 +209,42 @@ function setupEventListeners() {
     document.addEventListener('keydown', handleKeyboard);
 }
 
+// Mobile Upload Functions
+function triggerFileInput(source) {
+    console.log('Mobile upload triggered:', source);
+    
+    // Create a new file input for mobile
+    const mobileInput = document.createElement('input');
+    mobileInput.type = 'file';
+    mobileInput.multiple = true;
+    mobileInput.accept = 'image/*,video/*';
+    
+    // Set capture attribute based on source
+    if (source === 'camera') {
+        mobileInput.capture = 'environment'; // Use rear camera
+    }
+    
+    // Handle file selection
+    mobileInput.onchange = function(event) {
+        console.log('Mobile file selection:', event.target.files.length, 'files');
+        const files = Array.from(event.target.files);
+        if (files.length > 0) {
+            processFiles(files);
+        }
+        // Clean up
+        document.body.removeChild(mobileInput);
+    };
+    
+    // Add to DOM and trigger
+    mobileInput.style.display = 'none';
+    document.body.appendChild(mobileInput);
+    
+    // Small delay to ensure proper mobile handling
+    setTimeout(() => {
+        mobileInput.click();
+    }, 100);
+}
+
 // Mobile Touch Event Handlers
 let isDragging = false;
 
@@ -939,6 +975,11 @@ additionalStyles.textContent = `
         color: #6c757d;
     }
     
+    /* Hide mobile buttons on desktop */
+    .mobile-upload-buttons {
+        display: none;
+    }
+    
     @media (max-width: 768px) {
         .modal-video, .modal-image {
             max-width: 95vw;
@@ -971,6 +1012,41 @@ additionalStyles.textContent = `
         
         .upload-box:active {
             transform: scale(0.98);
+        }
+        
+        /* Mobile upload buttons */
+        .mobile-upload-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .mobile-upload-btn {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+        }
+        
+        .mobile-upload-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .mobile-upload-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Show mobile buttons only on mobile */
+        .mobile-upload-buttons {
+            display: flex !important;
         }
         
         /* Mobile file input */
