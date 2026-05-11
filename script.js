@@ -2,7 +2,7 @@
 const familyPhotos = [
     // 📸 ADD YOUR PHOTOS HERE (files from photos/ folder)
     {
-        src: 'photos/family-vacation-goa-2024.jpg',
+        src: 'photos/Screenshot from 2026-04-17 14-10-28.png',
         title: 'Family Vacation in Goa',
         date: 'March 15, 2024',
         description: 'Amazing beach vacation with the whole family. Beautiful sunsets and fun times at the beach.'
