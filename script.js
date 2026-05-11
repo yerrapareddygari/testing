@@ -1,5 +1,5 @@
 // Access control
-const ACCESS_CODE = "FAMILY2024"; // Change this to your desired code
+const ACCESS_CODE = "YReddy@0055"; // Change this to your desired code
 let uploadedImages = [];
 let isAuthenticated = false;
 
