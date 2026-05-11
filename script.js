@@ -1,9 +1,7 @@
-// Secure Authentication - Correct Hash for "YReddy@0055"
-const ACCESS_HASH = "cf63879d89e66cb1ad96bbddad28766050d24c8fcd648d70fc2af01e517836ec";
+const ACCESS_HASH = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f";
 
 // Debug: Test hash generation (remove after testing)
 async function testHashGeneration() {
-    const testPassword = "YReddy@0055";
     const hash = await sha256(testPassword);
     console.log('=== HASH DEBUG ===');
     console.log('Password entered:', testPassword);
@@ -183,10 +181,26 @@ function initializeGallery() {
 function setupEventListeners() {
     fileInput.addEventListener('change', handleFileSelect);
     
+    // Enhanced mobile support for drag and drop
     uploadBox.addEventListener('dragover', handleDragOver);
     uploadBox.addEventListener('dragleave', handleDragLeave);
     uploadBox.addEventListener('drop', handleDrop);
-    uploadBox.addEventListener('click', () => fileInput.click());
+    
+    // Mobile-specific touch events
+    uploadBox.addEventListener('touchstart', handleTouchStart, { passive: false });
+    uploadBox.addEventListener('touchmove', handleTouchMove, { passive: false });
+    uploadBox.addEventListener('touchend', handleTouchEnd, { passive: false });
+    
+    // Click event for both desktop and mobile
+    uploadBox.addEventListener('click', (e) => {
+        e.preventDefault();
+        fileInput.click();
+    });
+    
+    // Mobile file input focus fix
+    fileInput.addEventListener('focus', () => {
+        console.log('File input focused');
+    });
     
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal();
@@ -195,9 +209,58 @@ function setupEventListeners() {
     document.addEventListener('keydown', handleKeyboard);
 }
 
+// Mobile Touch Event Handlers
+let isDragging = false;
+
+function handleTouchStart(event) {
+    event.preventDefault();
+    isDragging = true;
+    uploadBox.classList.add('dragover');
+    console.log('Touch start - mobile drag detected');
+}
+
+function handleTouchMove(event) {
+    event.preventDefault();
+    if (isDragging) {
+        // Visual feedback for mobile drag
+        uploadBox.style.transform = 'scale(1.02)';
+    }
+}
+
+function handleTouchEnd(event) {
+    event.preventDefault();
+    isDragging = false;
+    uploadBox.classList.remove('dragover');
+    uploadBox.style.transform = 'scale(1)';
+    
+    // Check if files were dropped (for mobile browsers that support it)
+    if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+        processFiles(Array.from(event.dataTransfer.files));
+    } else {
+        // Fallback: trigger file input for mobile
+        setTimeout(() => {
+            fileInput.click();
+        }, 100);
+    }
+    console.log('Touch end - triggering file input');
+}
+
 // File Upload Functions
 function handleFileSelect(event) {
+    console.log('File selection triggered');
     const files = Array.from(event.target.files);
+    console.log('Files selected:', files.length);
+    
+    if (files.length === 0) {
+        console.log('No files selected');
+        return;
+    }
+    
+    // Mobile-specific: Clear the input after selection to allow re-selection
+    setTimeout(() => {
+        event.target.value = '';
+    }, 100);
+    
     processFiles(files);
 }
 
@@ -896,6 +959,54 @@ additionalStyles.textContent = `
             right: 10px;
             left: 10px;
             max-width: none;
+        }
+        
+        /* Mobile upload improvements */
+        .upload-box {
+            padding: 40px 20px;
+            min-height: 200px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .upload-box:active {
+            transform: scale(0.98);
+        }
+        
+        /* Mobile file input */
+        #fileInput {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        /* Mobile touch feedback */
+        .upload-box.dragover {
+            border-color: #28a745;
+            background: #f0fff0;
+            transform: scale(1.02);
+        }
+        
+        /* Improve mobile button sizes */
+        .nav-btn, .control-btn, .copy-btn {
+            min-height: 44px;
+            min-width: 44px;
+        }
+        
+        /* Mobile modal improvements */
+        .modal-header {
+            padding: 15px;
+        }
+        
+        .modal-actions {
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            padding: 12px 16px;
+            font-size: 14px;
         }
     }
 `;
